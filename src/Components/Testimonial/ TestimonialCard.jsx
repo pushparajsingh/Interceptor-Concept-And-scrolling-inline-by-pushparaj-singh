@@ -2,11 +2,20 @@ import React, { useEffect } from "react";
 import { instance } from "../../Service/Config";
 import { useState } from "react";
 import Slider from "react-slick";
+import {
+  getTestimonialList,
+  deletePost,
+  editData,
+  editPost,
+  submitForm,
+} from "../../redux/CounterSlice";
+import { useDispatch, useSelector } from "react-redux";
 
 const TestimonialCard = () => {
-  const [state, setState] = useState();
+  const { dataTestimonial, del, singleData, updateData, createPost } =
+    useSelector((state) => state);
   const [change, setChange] = useState({ check: true, id: "" });
-
+  const Dispatch = useDispatch();
   const [data, setData] = useState({
     Photo: "",
     Name: "",
@@ -21,104 +30,21 @@ const TestimonialCard = () => {
     speed: 500,
     autoplay: true,
     slidesToShow: 3,
-    slidesToScroll: 1,
+    slidesToScroll: 3,
   };
 
   useEffect(() => {
-    getTestimonialList();
-    console.log("getTestimonial");
-  }, []);
+    Dispatch(getTestimonialList());
+  }, [del, updateData, createPost]);
 
-  const getTestimonialList = async () => {
-    const result = await instance.get("all");
-    try {
-      if (result?.data) {
-        setState(result?.data);
-      }
-    } catch (error) {
-      console.log("list", error);
-    }
-  };
+  useEffect(() => {
+    setData(singleData);
+  }, [singleData]);
 
   function changeHandler(e) {
     setData({ ...data, [e.target.name]: e.target.value });
   }
 
-  function submitForm() {
-    console.log(data);
-    var formData = new FormData();
-    formData.append("Photo", data?.Photo);
-    formData.append("Name", data?.Name);
-    formData.append("Post", data?.Post);
-    formData.append("Description", data?.Description);
-    formData.append("Active", 1);
-
-    instance
-      .post("post", formData)
-      .then(() => {
-        getTestimonialList();
-      })
-      .catch((err) => console.log(333, err));
-  }
-
-  async function submitForm() {
-    console.log(444, data);
-    const multipleData = new FormData();
-    multipleData.append("Photo", data?.Photo);
-    multipleData.append("Name", data?.Name);
-    multipleData.append("Post", data?.Post);
-    multipleData.append("Description", data?.Description);
-    multipleData.append("Active", data?.Active === true ? 1 : 0);
-
-    const createTestimonial = await instance.post("post", multipleData);
-    try {
-      if (createTestimonial?.data) {
-        getTestimonialList();
-      }
-    } catch (error) {
-      console.log(777779999999, error);
-    }
-  }
-
-  async function deletePost(id) {
-    const deleteData = await instance.delete(`delete/${id}`);
-    try {
-      if (deleteData?.data) {
-        getTestimonialList();
-      }
-    } catch (err) {
-      console.log(777779999999, err);
-    }
-  }
-
-  async function editPost() {
-    const multiData = new FormData();
-    multiData.append("Photo", data?.Photo);
-    multiData.append("Name", data?.Name);
-    multiData.append("Post", data?.Post);
-    multiData.append("Description", data?.Description);
-    multiData.append("Active", data?.Active === true ? 1 : 0);
-
-    const results = await instance.put(`update/${change.id}`, multiData);
-    try {
-      if (results?.data) {
-        getTestimonialList();
-      }
-    } catch (error) {
-      console.log(777779999999, error);
-    }
-  }
-
-  function editData(item) {
-    setChange({ check: false, id: item });
-    instance
-      .get(`get/${item}`)
-      .then((result) => {
-        console.log(555, result.data);
-        setData({ ...result.data });
-      })
-      .catch((err) => console.log(333, err));
-  }
   return (
     <>
       <section id="testimonial" className="testimonial-area">
@@ -139,12 +65,21 @@ const TestimonialCard = () => {
             class="btn btn-primary"
             data-toggle="modal"
             data-target="#myModal"
+            onClick={() =>
+              setData({
+                Photo: "",
+                Name: "",
+                Post: "",
+                Description: "",
+                Active: 0,
+              })
+            }
           >
             Create Post
           </button>
           <div>
             <Slider {...settings}>
-              {state?.map((item) => {
+              {dataTestimonial?.map((item) => {
                 return (
                   <div>
                     <div className="single-testimonial mt-30 mb-30 text-center">
@@ -166,7 +101,7 @@ const TestimonialCard = () => {
                         <span className="sub-title">{item.Post}</span> <br />
                         <button
                           className="btn btn-danger"
-                          onClick={() => deletePost(item._id)}
+                          onClick={() => Dispatch(deletePost(item._id))}
                         >
                           Delete
                         </button>{" "}
@@ -174,7 +109,8 @@ const TestimonialCard = () => {
                         <button
                           className="btn btn-success"
                           onClick={() => {
-                            editData(item._id);
+                            Dispatch(editData(item._id));
+                            setChange({ check: false, id: item });
                           }}
                           data-toggle="modal"
                           data-target="#myModal"
@@ -289,7 +225,9 @@ const TestimonialCard = () => {
                 type="button"
                 class="btn btn-primary"
                 onClick={() => {
-                  change.check ? submitForm() : editPost();
+                  change.check
+                    ? Dispatch(submitForm(data))
+                    : Dispatch(editPost({ change, data }));
 
                   setChange({ ...change, check: true });
                 }}
